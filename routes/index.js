@@ -1,6 +1,18 @@
 var express = require('express');
 var router = express.Router();
 
+
+var mysql = require('mysql');
+var connection = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'root',
+  password : 'test1234',
+  database : 'smartalarm'
+});
+connection.connect();
+
+
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'SmartAlarm' });
@@ -19,15 +31,48 @@ router.delete('/branch', function(req, res) {
 });
 
 router.get('/branch/list', function(req, res) {
-	var position = req.query.position;
-	res.send(JSON.stringify({position:position}));
+	//var position = req.query.position;
+	//res.send(JSON.stringify({position:position}));
+
+	var obj = { result:true, ny:[] }
+
+	connection.query(
+		'select branch_name, address, position_x, branch_no \
+	       from tbl_branch_info \
+	      order by position_x',
+		function(err,results,fields) {
+			if (err) {
+				res.send(JSON.stringify({result:false,err:err}));
+			} else {
+				for (var i = 0; i < results.length; i++) {
+					obj.ny.push(results[i]);
+				}
+				res.send(JSON.stringify(obj));
+			}
+		});
 });
 
 router.post('/orderno', function(req, res) {
 	var branch_no = req.body.branch_no;
 	var seqno = req.body.seqno;
 	var device_token = req.body.device_token;
-	res.send(JSON.stringify({branch_no:branch_no,seqno:seqno,device_token:device_token}));
+
+	var branch_no = req.body.branch_no;
+	var order_no = req.body.order_no;
+	var device_token = req.body.device_token;	
+
+	connection.query(
+        'insert into tbl_orderno_mng \
+            (branch_no, order_no, call_time, status_cd, wait_status_cd, push_yn, device_token) \
+            values (?,?,?,?,?,?,?)',
+        [branch_no, order_no, '120000', 1, 1, 0, device_token],
+		function(err, result) {
+			if (err) {
+				res.send(JSON.stringify({result:false,err:err}));
+			} else {
+				res.send(JSON.stringify({result:true,db_result:result}));
+			}
+		})
 });
 
 router.put('/orderno', function(req, res) {
