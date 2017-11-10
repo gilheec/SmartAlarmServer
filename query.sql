@@ -8,7 +8,8 @@ CREATE TABLE tbl_orderno_mng
     ser_no integer PRIMARY KEY AUTO_INCREMENT,
     branch_no integer,
     order_no integer,
-    call_time VARCHAR(6),
+    dr_time date,
+    call_time date,
     status_cd integer,
     wait_status_cd integer,
     push_yn integer,
@@ -26,3 +27,6 @@ CREATE TABLE tbl_branch_info
     address VARCHAR(100),
     status_cd integer
 );
+
+    date_format(dr_time, '%H:%i:%s'),
+    TIMESTAMPDIFF(minute, dr_time, curtime())
