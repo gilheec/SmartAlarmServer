@@ -12,12 +12,13 @@ var connection = mysql.createConnection({
 connection.connect();
 
 
-
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'SmartAlarm' });
 });
 
+
+// 미사용
 router.put('/branch', function(req, res) {
 	var branch_no = req.body.branch_no;
 	var branch_name = req.body.branch_name;
@@ -26,12 +27,14 @@ router.put('/branch', function(req, res) {
 });
 
 
+// 미사용
 router.delete('/branch', function(req, res) {
 	var rowid = req.body.rowid;
 	res.send(JSON.stringify({}));
 });
 
 
+// 가까운 영업점 리스트 출력
 router.get('/branch/list', function(req, res) {
 	//var position = req.query.position;
 	//res.send(JSON.stringify({position:position}));
@@ -55,6 +58,7 @@ router.get('/branch/list', function(req, res) {
 });
 
 
+// 순번대기표 등록 처리
 router.post('/orderno', function(req, res) {
 	var branch_no = req.body.branch_no;
 	var order_no = req.body.order_no;
@@ -75,6 +79,7 @@ router.post('/orderno', function(req, res) {
 });
 
 
+// 미사용
 router.put('/orderno', function(req, res) {
 	var branch_no = req.body.branch_no;
 	var seqno = req.body.seqno;
@@ -82,17 +87,18 @@ router.put('/orderno', function(req, res) {
 });
 
 
+// 순번대기표 등록처리된 건 취소(상태를 9로 update)처리. 호출되지 않은건만 취소가능
 router.delete('/orderno', function(req, res) {
 	var device_token = req.body.device_token;
 
 	connection.query(
-	   'select min(ser_no) ser_no from tbl_orderno_mng where device_token = ? and status_cd = 1',
+	   'select max(ser_no) ser_no from tbl_orderno_mng \
+	    where device_token = ? and status_cd = 1 and wait_status_cd = 1',
 	    [device_token],
 		function(err,results,fields) {
 			if (err) {
 				res.send(JSON.stringify({result:false,err:err}));
 			} else {
-
 				connection.query(
 				   'update tbl_orderno_mng set status_cd = 9 where ser_no = ?',
 				    [results[0].ser_no],
@@ -105,16 +111,20 @@ router.delete('/orderno', function(req, res) {
 					});
 			}
 		});
-
 });
 
+// 미사용
 router.get('/orderno', function(req, res) {
 	var branch_no = req.query.branch_no;;
 	var seqno = req.query.seqno;
 	res.send(JSON.stringify({branch_no:branch_no,seqno:seqno}));
 });
 
-
+// 순번대기 상황 조회 ///////////////////////////////////////////////////////
+// 1. device_token 에 등록된 가장 큰 나의순번을 가지고 온다. 등록된 지점도..
+// 2. 등록된 지점에 나의순번보다 작은 앞의 사람 10개 내역을 가지고 온다.
+// 3. 순번 순서대로 정렬해서 화면에 보여준다. 맨 마지막이 내꺼.
+///////////////////////////////////////////////////////////////////////////
 router.post('/orderno/status', function(req, res) {
 	var device_token = req.body.device_token;
 
@@ -134,7 +144,7 @@ router.post('/orderno/status', function(req, res) {
 				 ( \
 					 select order_no, branch_no \
 					 from tbl_orderno_mng \
-					 where device_token = ?\
+					 where device_token = ? \
 					 and status_cd = 1 \
 					 order by ser_no desc \
 					 limit 1 \
@@ -162,6 +172,7 @@ router.post('/orderno/status', function(req, res) {
 
 
 
+// postman 으로 순번 호출처리 -> 호출된번호 뒤 2명에게 메세지 송신처리함
 /*
 서버키
 AAAAPp1PiY8:APA91bFMDMYV2-HQBhJNmmIITMlSJQzoGH9xXALexgvcNvNjBWuPKjBsNiaRAlgn459BQeqQuUkIkCFO8S8MOqAAllgjqrX8Pfy8rGDvmdyzmLCJddCnrbTO_b9J_oNyQvcL9fYZWhiW
@@ -260,11 +271,12 @@ router.put('/orderno/call', function(req, res) {
 
 
 
+// 최초 구동시 순번대기 등록여부 판단
 router.post('/orderno/check', function(req, res) {
 	var device_token = req.body.device_token;
 
 	connection.query(
-	   'select count(*) cnt from tbl_orderno_mng where device_token = ?',
+	   'select count(*) cnt from tbl_orderno_mng where device_token = ? and status_cd = 1',
 	    [device_token],
 		function(err,results,fields) {
 			if (err) {
